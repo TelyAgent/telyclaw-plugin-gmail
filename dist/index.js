@@ -26,6 +26,8 @@ const IMAP_CONNECT_TIMEOUT_MS = 10_000;
 const IMAP_RETRY_ATTEMPTS = 3;
 const IMAP_RETRY_DELAYS_MS = [100, 500, 2000];
 const AUTH_REQUIRED_ERROR = 'Gmail is not authorized. Ask the user for confirmation via AskUserQuestion, then call gmail_authorize to start the OAuth flow.';
+const OAUTH_SERVER_TIMEOUT_MS = 300_000; // 5 min — matches telegram_query timeout
+const GOOGLE_API_TIMEOUT_MS = 30_000;
 
 const GOOGLE_APP_CLIENT_ID ="166854276552-euk0006iphou9bvqplmgmpc0vde8v1in.apps.googleusercontent.com";                                                      
 const GOOGLE_APP_CLIENT_SECRET="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";                                                                                
@@ -166,6 +168,9 @@ function googleApiPost(hostname, path, accessToken, body, contentType = 'applica
             });
         });
         req.on('error', reject);
+        req.setTimeout(GOOGLE_API_TIMEOUT_MS, () => {
+            req.destroy(new Error(`Google API ${hostname}${path} timed out after ${GOOGLE_API_TIMEOUT_MS / 1000}s`));
+        });
         req.write(bodyBuf);
         req.end();
     });
@@ -900,7 +905,11 @@ const gmailPlugin = definePluginEntry({
                     throw new Error('Missing OAuth credentials. Set GOOGLE_APP_CLIENT_ID and GOOGLE_APP_CLIENT_SECRET in plugins.config.json → environment.gmail, or as environment variables.');
                 }
                 const port = 18080;
-                const redirectUri = `http://127.0.0.1:${port}/oauth/callback`;
+                // Use "localhost" instead of "127.0.0.1": Google OAuth requires the redirect URI
+                // to EXACTLY match the authorized URI in Google Cloud Console, and Google recommends
+                // "localhost" for desktop app OAuth flows. The server listens on all interfaces (0.0.0.0)
+                // to accept both localhost and 127.0.0.1 connections.
+                const redirectUri = `http://localhost:${port}/oauth/callback`;
                 const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
                 authUrl.searchParams.set('client_id', clientId);
                 authUrl.searchParams.set('redirect_uri', redirectUri);
@@ -908,26 +917,37 @@ const gmailPlugin = definePluginEntry({
                 authUrl.searchParams.set('scope', 'https://mail.google.com/ openid email');
                 authUrl.searchParams.set('access_type', 'offline');
                 authUrl.searchParams.set('prompt', 'consent');
+                console.error(`[gmail_authorize] Starting OAuth server on ${redirectUri}`);
                 return new Promise((resolvePromise, rejectPromise) => {
+                    let timeoutId;
+                    const cleanup = () => {
+                        if (timeoutId) clearTimeout(timeoutId);
+                    };
                     const server = http.createServer(async (req, res) => {
-                        const reqUrl = new URL(req.url || '/', `http://127.0.0.1:${port}`);
+                        const reqUrl = new URL(req.url || '/', `http://localhost:${port}`);
+                        console.error(`[gmail_authorize] Received request: ${reqUrl.pathname}`);
                         if (reqUrl.pathname !== '/oauth/callback') { res.writeHead(404); res.end('Not found'); return; }
                         const code = reqUrl.searchParams.get('code');
                         const error = reqUrl.searchParams.get('error');
                         if (error) {
+                            console.error(`[gmail_authorize] OAuth error from Google: ${error}`);
                             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                             res.end('<html><body><h3>Authorization Denied</h3><p>You may close this window.</p></body></html>');
+                            cleanup();
                             server.close();
                             resolvePromise(toolTextResult('Authorization was denied by the user.', { status: "error", error: `Authorization denied: ${error}` }));
                             return;
                         }
                         if (!code) {
+                            console.error('[gmail_authorize] No authorization code in callback');
                             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                             res.end('<html><body><h3>Error</h3><p>No authorization code received.</p></body></html>');
+                            cleanup();
                             server.close();
                             resolvePromise(toolTextResult('No authorization code received.', { status: "error", error: 'No authorization code received.' }));
                             return;
                         }
+                        console.error('[gmail_authorize] Exchanging code for tokens...');
                         try {
                             const tokenResp = await googleApiPost('oauth2.googleapis.com', '/token', '', new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: 'authorization_code' }).toString(), 'application/x-www-form-urlencoded');
                             const accessToken = tokenResp.access_token || '';
@@ -946,23 +966,35 @@ const gmailPlugin = definePluginEntry({
                             config.tokenExpiry = Date.now() + expiresIn * 1000;
                             if (email) config.email = email;
                             try { writeFileSync(configPath, JSON.stringify(config, null, 2)); } catch {}
+                            console.error(`[gmail_authorize] Authorization successful for ${email || 'unknown'}`);
                             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                             res.end('<html><body><h3>Authorization Successful!</h3><p>You may close this window and return to TelyClaw.</p></body></html>');
+                            cleanup();
                             server.close();
                             resolvePromise(toolTextResult(`Gmail authorization successful! Authorized as ${email || 'unknown'}.`, { status: "ok", email: email || null }));
                         } catch (err) {
+                            console.error(`[gmail_authorize] Token exchange failed: ${err.message}`);
                             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                             res.end(`<html><body><h3>Error</h3><p>Token exchange failed: ${err.message}</p></body></html>`);
+                            cleanup();
                             server.close();
                             resolvePromise(toolTextResult(`Token exchange failed: ${err.message}`, { status: "error", error: err.message }));
                         }
                     });
                     server.on('error', (err) => {
+                        console.error(`[gmail_authorize] Server error: ${err.code} - ${err.message}`);
                         if (err.code === 'EADDRINUSE') rejectPromise(new Error(`Port ${port} is already in use. Is another OAuth flow or application running on that port?`));
                         else rejectPromise(err);
                     });
-                    server.listen(port, '127.0.0.1', () => {
+                    // Timeout: if the OAuth callback doesn't arrive within 5 minutes, abort with a clear error
+                    timeoutId = setTimeout(() => {
+                        console.error('[gmail_authorize] Timed out waiting for OAuth callback');
+                        server.close();
+                        rejectPromise(new Error(`OAuth authorization timed out after ${OAUTH_SERVER_TIMEOUT_MS / 1000}s. The browser callback to ${redirectUri} was not received. Check that: (1) the Google Cloud Console has this exact redirect URI in the authorized list, (2) no firewall is blocking localhost connections.`));
+                    }, OAUTH_SERVER_TIMEOUT_MS);
+                    server.listen(port, '0.0.0.0', () => {
                         const url = authUrl.toString();
+                        console.error(`[gmail_authorize] Opening browser: ${url.substring(0, 120)}...`);
                         if (process.platform === 'darwin') spawn('open', [url]);
                         else if (process.platform === 'win32') spawn('cmd', ['/c', 'start', url]);
                         else spawn('xdg-open', [url]);

@@ -3,9 +3,11 @@
   "name": "Gmail",
   "description": "Gmail plugin for OpenClaw. IMAP for reading/searching (X-GM-RAW, multi-term AND, hasAttachment, thread fetch, HTML→text fallback, attachment download) and Gmail API for sending/reply.",
   "version": "0.4.0",
+  "type": "subprocess",
+  "entry": "run-tool.mjs",
   "oauth": {
     "provider": "google",
-    "redirectUri": "http://127.0.0.1:18080/oauth/callback",
+    "redirectUri": "http://localhost:18080/oauth/callback",
     "scopes": ["https://mail.google.com/", "openid", "email"],
     "authorizeUrl": "https://accounts.google.com/o/oauth2/v2/auth",
     "tokenUrl": "https://oauth2.googleapis.com/token"

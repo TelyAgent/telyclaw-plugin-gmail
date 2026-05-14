@@ -31,7 +31,13 @@ try { params = JSON.parse(paramsJson); } catch {
 }
 
 const { username, accessToken: rawToken, config, configPath } = resolveAuth(__dirname);
-const accessToken = await refreshTokenIfExpired({ accessToken: rawToken, config, configPath });
+
+// gmail_authorize handles its own token acquisition — skip refresh to avoid
+// blocking on potentially invalid/expired tokens before the OAuth flow starts.
+const isAuthTool = toolName === 'gmail_authorize';
+const accessToken = isAuthTool
+  ? rawToken
+  : await refreshTokenIfExpired({ accessToken: rawToken, config, configPath });
 
 const tools = {};
 const mockApi = {
@@ -49,6 +55,9 @@ if (!tool) {
 try {
   const result = await tool.execute(`req-${Date.now()}`, params);
   console.log(JSON.stringify({ success: true, data: result }));
+  // Explicit exit to ensure the process terminates promptly even if the
+  // tool left lingering handles (HTTP server sockets, timers, etc.).
+  setImmediate(() => process.exit(0));
 } catch (error) {
   fail(error instanceof Error ? error.message : 'Gmail plugin execution failed');
 }
