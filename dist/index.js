@@ -4,7 +4,7 @@ import { simpleParser } from "mailparser";
 import nodemailer from "nodemailer";
 import { mkdir, writeFile } from "node:fs/promises";
 import { readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+// homedir resolved via env vars to avoid importing node:os (not available in all hosts)
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
@@ -55,7 +55,7 @@ function normalizeConfig(input) {
     defaultMailbox: input.defaultMailbox ?? DEFAULT_MAILBOX,
     defaultSearchLimit: input.defaultSearchLimit ?? DEFAULT_SEARCH_LIMIT,
     attachmentsDir:
-      input.attachmentsDir ?? join(homedir(), ".openclaw", "inbox", "gmail"),
+      input.attachmentsDir ?? join(process.cwd(), ".openclaw", "inbox", "gmail"),
     requireExplicitSendConfirmation:
       input.requireExplicitSendConfirmation ?? true,
   };
