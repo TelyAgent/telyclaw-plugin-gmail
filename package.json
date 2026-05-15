@@ -37,16 +37,7 @@
   "openclaw": {
     "extensions": [
       "./dist/index.js"
-    ],
-    "compat": {
-      "pluginApi": ">=2026.4.0"
-    },
-    "build": {
-      "openclawVersion": "2026.5.7"
-    },
-    "install": {
-      "minHostVersion": ">=2026.4.0"
-    }
+    ]
   },
   "dependencies": {
     "@sinclair/typebox": "^0.32.0",
@@ -59,8 +50,5 @@
     "@types/node": "^22.0.0",
     "@types/nodemailer": "^6.4.16",
     "typescript": "^5.6.0"
-  },
-  "peerDependencies": {
-    "openclaw": ">=2026.4.0"
   }
 }
