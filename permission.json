@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "plugin": "gmail",
+  "description": "Gmail IMAP and Gmail API integration — read, search, send, reply, and manage emails",
+  "default_risk": "Medium",
+  "tools": {
+    "gmail_authorize": {
+      "risk": "Medium",
+      "action_type": "Configure",
+      "has_external_side_effect": true,
+      "is_reversible": true,
+      "description": "OAuth 2.0 authorization — opens browser, exchanges code for tokens, saves credentials"
+    },
+    "gmail_mailboxes_list": {
+      "risk": "Low",
+      "action_type": "Read",
+      "has_external_side_effect": false,
+      "is_reversible": true,
+      "description": "List mailbox folders/labels — read-only"
+    },
+    "gmail_messages_search": {
+      "risk": "Low",
+      "action_type": "Read",
+      "has_external_side_effect": false,
+      "is_reversible": true,
+      "description": "Search messages via IMAP — read-only query, no modifications"
+    },
+    "gmail_message_get": {
+      "risk": "Low",
+      "action_type": "Read",
+      "has_external_side_effect": false,
+      "is_reversible": true,
+      "description": "Fetch a single message by UID with full body and attachments metadata — read-only"
+    },
+    "gmail_thread_get": {
+      "risk": "Low",
+      "action_type": "Read",
+      "has_external_side_effect": false,
+      "is_reversible": true,
+      "description": "Fetch all messages in a thread — read-only"
+    },
+    "gmail_message_attachments_save": {
+      "risk": "Medium",
+      "action_type": "Execute",
+      "has_external_side_effect": true,
+      "is_reversible": true,
+      "description": "Download attachments to local disk — writes files to the workspace"
+    },
+    "gmail_message_update": {
+      "risk": "Low",
+      "action_type": "Configure",
+      "has_external_side_effect": true,
+      "is_reversible": true,
+      "description": "Mark message read/unread or starred/unstarred — reversible flag toggles"
+    },
+    "gmail_message_move": {
+      "risk": "Medium",
+      "action_type": "Execute",
+      "has_external_side_effect": true,
+      "is_reversible": true,
+      "description": "Move a message to another folder — reversible (can be moved back)"
+    },
+    "gmail_message_send": {
+      "risk": "Medium",
+      "action_type": "SendMessage",
+      "has_external_side_effect": true,
+      "is_reversible": false,
+      "description": "Send a new email via Gmail API — irreversible once sent. Plugin-level guard: requires confirm=true"
+    },
+    "gmail_message_reply": {
+      "risk": "Medium",
+      "action_type": "SendMessage",
+      "has_external_side_effect": true,
+      "is_reversible": false,
+      "description": "Reply to an existing message — irreversible once sent. Plugin-level guard: requires confirm=true"
+    }
+  }
+}
