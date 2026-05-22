@@ -6,7 +6,7 @@
   "type": "subprocess",
   "entry": "run-tool.mjs", 
   "icon": "./assets/gmail.png",
-  "brand_color": "#EA4335",
+  "brandColor": "#EA4335",
   "oauth": {
     "provider": "google",
     "redirectUri": "http://localhost:18080/oauth/callback",
