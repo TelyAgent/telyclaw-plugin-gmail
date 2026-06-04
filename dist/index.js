@@ -31,9 +31,8 @@ const OAUTH_SERVER_TIMEOUT_MS = 300_000; // 5 min — matches telegram_query tim
 const GOOGLE_API_TIMEOUT_MS = 30_000;
 
 const GOOGLE_APP_CLIENT_ID =
-  "166854276552-euk0006iphou9bvqplmgmpc0vde8v1in.apps.googleusercontent.com";
-const GOOGLE_APP_CLIENT_SECRET = "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";
-const GOOGLE_API_KEY = "AIzaSyB5MU4npnKKOLaygbrI4pPH7-QbpIfNfwk";
+  "538884342692-p4m10vr5uvmscb3tk75fkd50nli8n8ot.apps.googleusercontent.com";
+const GOOGLE_APP_CLIENT_SECRET = "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";
 
 function requireAuth(cfg) {
   if (!cfg.username || !cfg.accessToken) {
