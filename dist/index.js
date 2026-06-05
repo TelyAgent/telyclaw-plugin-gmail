@@ -1158,7 +1158,7 @@ const gmailPlugin = {
         // to EXACTLY match the authorized URI in Google Cloud Console, and Google recommends
         // "localhost" for desktop app OAuth flows. The server listens on all interfaces (0.0.0.0)
         // to accept both localhost and 127.0.0.1 connections.
-        const redirectUri = `http://localhost:${port}/oauth/callback`;
+        const redirectUri = `http://localhost:${port}/auth/callback`;
         const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
         authUrl.searchParams.set("client_id", clientId);
         authUrl.searchParams.set("redirect_uri", redirectUri);
