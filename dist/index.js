@@ -1154,11 +1154,7 @@ const gmailPlugin = {
           );
         }
         const port = 18080;
-        // Use "localhost" instead of "127.0.0.1": Google OAuth requires the redirect URI
-        // to EXACTLY match the authorized URI in Google Cloud Console, and Google recommends
-        // "localhost" for desktop app OAuth flows. The server listens on all interfaces (0.0.0.0)
-        // to accept both localhost and 127.0.0.1 connections.
-        const redirectUri = `http://localhost:${port}/auth/callback`;
+        const redirectUri = `http://127.0.0.1:${port}/auth/callback`;
         const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
         authUrl.searchParams.set("client_id", clientId);
         authUrl.searchParams.set("redirect_uri", redirectUri);
@@ -1182,7 +1178,7 @@ const gmailPlugin = {
             console.error(
               `[gmail_authorize] Received request: ${reqUrl.pathname}`,
             );
-            if (reqUrl.pathname !== "/oauth/callback") {
+            if (reqUrl.pathname !== "/auth/callback") {
               res.writeHead(404);
               res.end("Not found");
               return;
