@@ -32,7 +32,7 @@ const GOOGLE_API_TIMEOUT_MS = 30_000;
 
 const GOOGLE_APP_CLIENT_ID =
   "538884342692-p4m10vr5uvmscb3tk75fkd50nli8n8ot.apps.googleusercontent.com";
-const GOOGLE_APP_CLIENT_SECRET = "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";
+const GOOGLE_APP_CLIENT_SECRET = "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";
 
 function requireAuth(cfg) {
   if (!cfg.username || !cfg.accessToken) {
